@@ -1,0 +1,12 @@
+[package]
+name = "flapply_bird_rs"
+version = "0.1.0"
+authors = ["Coeuvre Wong <coeuvre@gmail.com>"]
+
+[dependencies]
+gl = "*"
+libc = "*"
+glutin = "*"
+
+[build-dependencies]
+cc = "*"
