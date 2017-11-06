@@ -1,6 +1,6 @@
 use std;
 // use std::ops::Index;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io;
@@ -17,11 +17,36 @@ pub enum Pixel {
 }
 
 pub struct Image {
+    path: Option<PathBuf>,
     stbi: StbImage,
 }
 
 impl Image {
-    pub fn get_pixel(&self, x: u32, y: u32) -> Option<Pixel> {
+    pub fn load<P: AsRef<Path>>(path: P) -> io::Result<Image> {
+        let path_buf = path.as_ref().to_path_buf();
+        let mut file = File::open(path)?;
+
+        let file_size = file.seek(io::SeekFrom::End(0))? as usize;
+        file.seek(io::SeekFrom::Start(0))?;
+
+        let mut buf = Vec::with_capacity(file_size);
+        file.read_to_end(&mut buf)?;
+
+        let stbi = StbImage::load_from_memory(&mut buf)?;
+
+        assert!(stbi.n == 4);
+
+        Ok(Image {
+            path: Some(path_buf),
+            stbi,
+        })
+    }
+
+    pub fn path(&self) -> Option<&Path> {
+        self.path.as_ref().map(|path_buf| path_buf.as_path())
+    }
+
+    pub fn pixel(&self, x: u32, y: u32) -> Option<Pixel> {
         let w = self.stbi.w as u32;
         let h = self.stbi.h as u32;
 
@@ -73,7 +98,7 @@ impl<'a> Iterator for Pixels<'a> {
         let x = self.offset % w;
         let y = self.offset / w;
         self.offset += 1;
-        self.image.get_pixel(x, y)
+        self.image.pixel(x, y)
     }
 }
 
@@ -135,23 +160,5 @@ impl StbImage {
 impl Drop for StbImage {
     fn drop(&mut self) {
         unsafe { stbi_image_free(self.data) };
-    }
-}
-
-impl Image {
-    pub fn load<P: AsRef<Path>>(path: P) -> io::Result<Image> {
-        let mut file = File::open(path)?;
-
-        let file_size = file.seek(io::SeekFrom::End(0))? as usize;
-        file.seek(io::SeekFrom::Start(0))?;
-
-        let mut buf = Vec::with_capacity(file_size);
-        file.read_to_end(&mut buf)?;
-
-        let stbi = StbImage::load_from_memory(&mut buf)?;
-
-        assert!(stbi.n == 4);
-
-        Ok(Image { stbi })
     }
 }

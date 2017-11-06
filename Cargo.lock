@@ -121,7 +121,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "flapply_bird_rs"
+name = "flapply_bird"
 version = "0.1.0"
 dependencies = [
  "cc 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
