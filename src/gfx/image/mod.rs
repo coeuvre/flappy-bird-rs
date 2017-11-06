@@ -42,6 +42,14 @@ impl Image {
         })
     }
 
+    pub fn width(&self) -> u32 {
+        self.stbi.w as u32
+    }
+
+    pub fn height(&self) -> u32 {
+        self.stbi.h as u32
+    }
+
     pub fn path(&self) -> Option<&Path> {
         self.path.as_ref().map(|path_buf| path_buf.as_path())
     }
