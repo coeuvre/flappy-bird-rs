@@ -3,6 +3,7 @@ extern crate cc;
 fn main() {
     cc::Build::new()
         .file("src/image/stb_image.c")
+        .static_flag(true)
         .compile("stb_image");
     println!("cargo:rustc-link-lib=static=stb_image");
 }

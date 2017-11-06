@@ -1,4 +1,5 @@
 use std;
+// use std::ops::Index;
 use std::path::Path;
 use std::fs::File;
 use std::io::prelude::*;
@@ -9,8 +10,10 @@ mod stb_image;
 
 use self::stb_image::*;
 
+#[derive(Clone, Copy, Debug)]
 pub enum Pixel {
     Rgba8 { r: u8, g: u8, b: u8, a: u8 },
+    A8 { a: u8 },
 }
 
 pub struct Image {
@@ -18,37 +21,19 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn iter(&self) -> PixelIter {
-        PixelIter {
-            image: self,
-            offset: 0,
-        }
-    }
-}
+    pub fn get_pixel(&self, x: u32, y: u32) -> Option<Pixel> {
+        let w = self.stbi.w as u32;
+        let h = self.stbi.h as u32;
 
-pub struct PixelIter<'a> {
-    image: &'a Image,
-    offset: u32,
-}
-
-impl<'a> Iterator for PixelIter<'a> {
-    type Item = Pixel;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let w = self.image.stbi.w as u32;
-        let h = self.image.stbi.h as u32;
-        let n = self.image.stbi.n as u32;
-        let x = self.offset % w;
-        let y = self.offset / w;
-        let stride = w * n;
-
-        if y >= h {
+        if x >= w || y >= h {
             return None;
         }
 
+        let n = self.stbi.n as u32;
+        let stride = w * n;
+        let offset = y * stride + x * n;
         let pixel = unsafe {
-            let offset = y * stride + x * n;
-            let p = self.image.stbi.data.offset(offset as isize);
+            let p = self.stbi.data.offset(offset as isize);
             match n {
                 4 => Pixel::Rgba8 {
                     r: *p.offset(0),
@@ -60,11 +45,45 @@ impl<'a> Iterator for PixelIter<'a> {
             }
         };
 
-        self.offset += 1;
-
         Some(pixel)
     }
+
+    pub fn pixels(&self) -> Pixels {
+        Pixels {
+            image: self,
+            offset: 0,
+        }
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        self.stbi.bytes()
+    }
 }
+
+pub struct Pixels<'a> {
+    image: &'a Image,
+    offset: u32,
+}
+
+impl<'a> Iterator for Pixels<'a> {
+    type Item = Pixel;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let w = self.image.stbi.w as u32;
+        let x = self.offset % w;
+        let y = self.offset / w;
+        self.offset += 1;
+        self.image.get_pixel(x, y)
+    }
+}
+
+// impl<'a> Index<(u32, u32)> for Pixels<'a> {
+//     type Output = Option<Pixel>;
+
+//     fn index(&self, index: (u32, u32)) -> &Self::Output {
+//         self.image.get_pixel(index.0, index.1)
+//     }
+// }
 
 struct StbImage {
     data: *mut u8,
@@ -105,6 +124,10 @@ impl StbImage {
         }
 
         Ok(stbi)
+    }
+
+    fn bytes(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.data, (self.n * self.w * self.h) as usize) }
     }
 }
 
