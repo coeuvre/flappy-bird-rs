@@ -1,15 +1,69 @@
 extern crate gl;
 
 pub mod image;
+pub mod program;
 
 use std;
+use std::io;
+use std::path::Path;
 use std::os::raw::c_void;
+use std::ffi::CStr;
 
 use self::image::GeneralImage;
+use self::program::draw_texture::DrawTextureProgram;
+
+pub struct RenderContext {
+    gl_context: GlContext,
+    draw_texture_program: DrawTextureProgram,
+}
+
+impl RenderContext {
+    pub fn new<F>(loadfn: F) -> RenderContext
+    where
+        F: FnMut(&str) -> *const c_void,
+    {
+        let mut gl_context = GlContext::new(loadfn);
+        RenderContext {
+            draw_texture_program: DrawTextureProgram::new(&mut gl_context),
+            gl_context,
+        }
+    }
+
+    pub fn load_texture<P: AsRef<Path>>(&mut self, path: P) -> io::Result<GlTexture2D> {
+        let image = image::GeneralImage::load(path)?;
+        Ok(GlTexture2D::from_image(&mut self.gl_context, &image))
+    }
+}
 
 pub struct GlContext {}
 
 impl GlContext {
+    pub fn new<F>(loadfn: F) -> GlContext
+    where
+        F: FnMut(&str) -> *const c_void,
+    {
+        unsafe {
+            gl::load_with(loadfn);
+
+            println!(
+                "OpenGL {}, GLSL {}",
+                CStr::from_ptr(gl::GetString(gl::VERSION) as *const i8)
+                    .to_string_lossy()
+                    .into_owned(),
+                CStr::from_ptr(gl::GetString(gl::SHADING_LANGUAGE_VERSION) as *const i8)
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+
+            gl::Enable(gl::BLEND);
+            // Pre-multiplied alpha format
+            gl::BlendFunc(gl::ONE, gl::ONE_MINUS_SRC_ALPHA);
+            // Render at linear color space
+            gl::Enable(gl::FRAMEBUFFER_SRGB);
+        }
+        GlContext {}
+    }
+
     pub fn is_current(&self) -> bool {
         true
     }

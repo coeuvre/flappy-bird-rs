@@ -6,9 +6,9 @@ use glutin::GlContext;
 pub mod gfx;
 pub mod math;
 
-fn main() {
-    // let background_image = gfx::image::Image::load("assets/sprites/background_day.png").unwrap();
+use gfx::RenderContext;
 
+fn main() {
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new()
         .with_title("Flappy Bird")
@@ -22,6 +22,10 @@ fn main() {
         // gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
         // gl::ClearColor(0.0, 1.0, 0.0, 1.0);
     }
+
+    let mut rc = RenderContext::new(|symbol| gl_window.get_proc_address(symbol) as *const _);
+    let background_texture = rc.load_texture("assets/sprites/background_day.png")
+        .unwrap();
 
     let mut running = true;
     while running {
