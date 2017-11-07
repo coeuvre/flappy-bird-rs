@@ -1,12 +1,14 @@
-extern crate gl;
 extern crate glutin;
 extern crate libc;
 
 use glutin::GlContext;
 
 pub mod gfx;
+pub mod math;
 
 fn main() {
+    // let background_image = gfx::image::Image::load("assets/sprites/background_day.png").unwrap();
+
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new()
         .with_title("Flappy Bird")
@@ -17,8 +19,8 @@ fn main() {
     unsafe {
         gl_window.make_current().unwrap();
 
-        gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
-        gl::ClearColor(0.0, 1.0, 0.0, 1.0);
+        // gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
+        // gl::ClearColor(0.0, 1.0, 0.0, 1.0);
     }
 
     let mut running = true;
@@ -37,9 +39,7 @@ fn main() {
             _ => (),
         });
 
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
+        // unsafe { gl::Clear(gl::COLOR_BUFFER_BIT) };
 
         gl_window.swap_buffers().unwrap();
     }
