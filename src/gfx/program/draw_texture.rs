@@ -2,7 +2,8 @@ use std;
 use std::mem;
 use std::os::raw::c_void;
 
-use super::super::{gl, GlContext};
+use math::{GlMat3, Trans2};
+use super::super::{gl, GlContext, GlTexture2D};
 use super::compile_program;
 
 pub struct DrawTextureProgram {
@@ -122,9 +123,81 @@ impl DrawTextureProgram {
             loc_mvp,
         }
     }
+
+    pub fn draw(&mut self, ctx: &mut GlContext, texture: &GlTexture2D, trans: Trans2) {
+        assert!(ctx.is_current());
+
+        let glm = GlMat3::from(trans);
+        let vertices = [
+            DrawTextureVertexAttrib {
+                t0: [glm.e[0], glm.e[1], glm.e[2]],
+                t1: [glm.e[3], glm.e[4], glm.e[5]],
+                t2: [glm.e[6], glm.e[7], glm.e[8]],
+                pos: [1.0, 1.0],
+                texcoord: [1.0, 1.0],
+                color: [1.0, 1.0, 1.0, 1.0],
+            },
+            DrawTextureVertexAttrib {
+                t0: [glm.e[0], glm.e[1], glm.e[2]],
+                t1: [glm.e[3], glm.e[4], glm.e[5]],
+                t2: [glm.e[6], glm.e[7], glm.e[8]],
+                pos: [1.0, 0.0],
+                texcoord: [1.0, 0.0],
+                color: [1.0, 1.0, 1.0, 1.0],
+            },
+            DrawTextureVertexAttrib {
+                t0: [glm.e[0], glm.e[1], glm.e[2]],
+                t1: [glm.e[3], glm.e[4], glm.e[5]],
+                t2: [glm.e[6], glm.e[7], glm.e[8]],
+                pos: [0.0, 0.0],
+                texcoord: [0.0, 0.0],
+                color: [1.0, 1.0, 1.0, 1.0],
+            },
+            DrawTextureVertexAttrib {
+                t0: [glm.e[0], glm.e[1], glm.e[2]],
+                t1: [glm.e[3], glm.e[4], glm.e[5]],
+                t2: [glm.e[6], glm.e[7], glm.e[8]],
+                pos: [0.0, 1.0],
+                texcoord: [0.0, 1.0],
+                color: [1.0, 1.0, 1.0, 1.0],
+            },
+        ];
+
+        let indices: [u32; 6] = [0, 1, 3, 1, 2, 3];
+
+        unsafe {
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                mem::size_of::<DrawTextureVertexAttrib>() as isize * 4,
+                vertices.as_ptr() as *const c_void,
+                gl::STREAM_DRAW,
+            );
+
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                mem::size_of::<u32>() as isize * 6,
+                indices.as_ptr() as *const c_void,
+                gl::STREAM_DRAW,
+            );
+
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, texture.id.id);
+
+            gl::UseProgram(self.program);
+            let mvp = GlMat3::from(Trans2::identity());
+            gl::UniformMatrix3fv(self.loc_mvp, 1, gl::FALSE, mvp.e.as_ptr());
+
+            gl::BindVertexArray(self.vao);
+
+            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const c_void);
+        }
+    }
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct DrawTextureVertexAttrib {
     t0: [f32; 3],
     t1: [f32; 3],

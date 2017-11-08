@@ -9,29 +9,40 @@ use std::path::Path;
 use std::os::raw::c_void;
 use std::ffi::CStr;
 
+use math::Trans2;
+
 use self::image::GeneralImage;
 use self::program::draw_texture::DrawTextureProgram;
 
-pub struct RenderContext {
+pub struct Graphics {
     gl_context: GlContext,
     draw_texture_program: DrawTextureProgram,
 }
 
-impl RenderContext {
-    pub fn new<F>(loadfn: F) -> RenderContext
+impl Graphics {
+    pub fn new<F>(loadfn: F) -> Graphics
     where
         F: FnMut(&str) -> *const c_void,
     {
         let mut gl_context = GlContext::new(loadfn);
-        RenderContext {
+        Graphics {
             draw_texture_program: DrawTextureProgram::new(&mut gl_context),
             gl_context,
         }
     }
 
+    pub fn clear(&mut self) {
+        unsafe { gl::Clear(gl::COLOR_BUFFER_BIT) };
+    }
+
     pub fn load_texture<P: AsRef<Path>>(&mut self, path: P) -> io::Result<GlTexture2D> {
         let image = image::GeneralImage::load(path)?;
         Ok(GlTexture2D::from_image(&mut self.gl_context, &image))
+    }
+
+    pub fn draw_texture(&mut self, texture: &GlTexture2D) {
+        self.draw_texture_program
+            .draw(&mut self.gl_context, texture, Trans2::identity());
     }
 }
 
@@ -55,12 +66,17 @@ impl GlContext {
                     .into_owned(),
             );
 
+            gl::Viewport(0, 0, 288, 512);
+
+            gl::ClearColor(0.0, 0.0, 0.0, 0.0);
+
             gl::Enable(gl::BLEND);
             // Pre-multiplied alpha format
             gl::BlendFunc(gl::ONE, gl::ONE_MINUS_SRC_ALPHA);
             // Render at linear color space
             gl::Enable(gl::FRAMEBUFFER_SRGB);
         }
+
         GlContext {}
     }
 

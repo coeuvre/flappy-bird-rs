@@ -6,7 +6,7 @@ use glutin::GlContext;
 pub mod gfx;
 pub mod math;
 
-use gfx::RenderContext;
+use gfx::Graphics;
 
 fn main() {
     let mut events_loop = glutin::EventsLoop::new();
@@ -23,8 +23,8 @@ fn main() {
         // gl::ClearColor(0.0, 1.0, 0.0, 1.0);
     }
 
-    let mut rc = RenderContext::new(|symbol| gl_window.get_proc_address(symbol) as *const _);
-    let background_texture = rc.load_texture("assets/sprites/background_day.png")
+    let mut gfx = Graphics::new(|symbol| gl_window.get_proc_address(symbol) as *const _);
+    let background_texture = gfx.load_texture("assets/sprites/background_day.png")
         .unwrap();
 
     let mut running = true;
@@ -43,7 +43,9 @@ fn main() {
             _ => (),
         });
 
-        // unsafe { gl::Clear(gl::COLOR_BUFFER_BIT) };
+        gfx.clear();
+
+        gfx.draw_texture(&background_texture);
 
         gl_window.swap_buffers().unwrap();
     }
